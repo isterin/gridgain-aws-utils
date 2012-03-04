@@ -27,14 +27,13 @@ class GridTcpDiscoveryDynamoDbIpFinder(val awsCredentials: AWSCredentials, val t
   def getRegisteredAddresses = {
     val res = client.scan(new ScanRequest(tableName))
     for (item <- res.getItems)
-      yield new InetSocketAddress(InetAddress.getByName(item("node_id").getS), item("port").getN.toInt)
+      yield new InetSocketAddress(InetAddress.getByName(item(primaryKeyName).getS), item("port").getN.toInt)
   }
 
   def registerAddresses(nodes: Collection[InetSocketAddress]) {
     nodes.foreach(n => {
-      println("Registering... " + n)
       val item = Map[String, AttributeValue](
-        "node_id" -> new AttributeValue().withS(n.getAddress.getHostAddress),
+        primaryKeyName -> new AttributeValue().withS(n.getAddress.getHostAddress),
         "port" -> new AttributeValue().withN(n.getPort.toString)
       )
       try {
@@ -48,7 +47,6 @@ class GridTcpDiscoveryDynamoDbIpFinder(val awsCredentials: AWSCredentials, val t
 
   def unregisterAddresses(nodes: Collection[InetSocketAddress]) {
     nodes.foreach(n => {
-      println("Unregistering... " + n)
       try {
         client.deleteItem(
           new DeleteItemRequest(tableName, new Key(new AttributeValue(n.getAddress.getHostAddress))))
